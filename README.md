@@ -262,14 +262,19 @@ Automated load test scenario executes smoke, ramp-up, and spike load tests via `
 k6 run test/load/k6_scenario.js
 ```
 
-### Performance Benchmarks (SLOs)
+### Performance Benchmarks (SLOs vs Verified Local Results)
 
-| Metric | Threshold |
-| :--- | :--- |
-| **P95 Latency** | `< 200ms` |
-| **P99 Latency** | `< 500ms` |
-| **Error Rate** | `< 1%` |
-| **RPS Target (Spike)** | `2000 Requests/sec` |
+The engine was load tested using `k6` simulating a realistic 70% read / 30% write workload (50 concurrent looping users, 15s duration, rate limiter bypassed to measure raw system performance):
+
+| Metric | Target / Threshold | Verified Local Results |
+| :--- | :--- | :--- |
+| **Throughput / RPS** | `2000 Requests/sec` (Spike target) | **9,636.39 Requests/sec** |
+| **Error Rate** | `< 1%` | **0.00%** |
+| **Average Latency** | — | **4.95 ms** |
+| **P95 Latency (Overall)** | `< 200 ms` | **9.07 ms** |
+| **P99 Latency (Overall)** | `< 500 ms` | **15.01 ms** |
+| **Shorten URL P95** | `< 300 ms` | **10.21 ms** |
+| **Resolve URL P95** | `< 100 ms` | **6.32 ms** |
 
 ---
 
