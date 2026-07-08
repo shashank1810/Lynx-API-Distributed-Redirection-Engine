@@ -1,0 +1,113 @@
+
+services:
+  # ── Application ──────────────────────────────────────────
+  gateway:
+    build:
+      context: /home/raizel/Desktop/Project Gamma
+      dockerfile: deploy/docker/Dockerfile
+    container_name: gateway-app
+    ports:
+      - "8080:8080"
+    environment:
+      GATEWAY_DATABASE_HOST: postgres
+      GATEWAY_DATABASE_PORT: 5432
+      GATEWAY_DATABASE_USER: gateway
+      GATEWAY_DATABASE_PASSWORD: gateway_secret
+      GATEWAY_DATABASE_DBNAME: gateway
+      GATEWAY_DATABASE_SSLMODE: disable
+      GATEWAY_REDIS_ADDR: redis:6379
+      GATEWAY_REDIS_PASSWORD: ""
+      GATEWAY_TELEMETRY_METRICS_ENABLED: "true"
+      GATEWAY_TELEMETRY_TRACING_ENABLED: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - gateway-net
+
+  # ── PostgreSQL ───────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: gateway-postgres
+    environment:
+      POSTGRES_USER: gateway
+      POSTGRES_PASSWORD: gateway_secret
+      POSTGRES_DB: gateway
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - /home/raizel/Desktop/Project Gamma/migrations/000001_create_urls_table.up.sql:/docker-entrypoint-initdb.d/01_create_urls.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gateway -d gateway"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - gateway-net
+
+  # ── Redis ────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: gateway-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - gateway-net
+
+  # ── Prometheus ───────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: gateway-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - promdata:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=7d"
+    restart: unless-stopped
+    networks:
+      - gateway-net
+
+  # ── Grafana ──────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:11.2.2
+    container_name: gateway-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafanadata:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - gateway-net
+
+volumes:
+  pgdata:
+  redisdata:
+  promdata:
+  grafanadata:
+
+networks:
+  gateway-net:
+    driver: bridge

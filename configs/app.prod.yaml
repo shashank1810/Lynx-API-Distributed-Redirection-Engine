@@ -1,0 +1,43 @@
+server:
+  port: 8080
+  host: "0.0.0.0"
+  read_timeout: "5s"
+  write_timeout: "10s"
+  idle_timeout: "120s"
+  shutdown_timeout: "30s"
+
+database:
+  host: "postgres"
+  port: 5432
+  user: "gateway"
+  password: "gateway_secret"
+  dbname: "gateway"
+  sslmode: "disable"
+  max_open_conns: 50
+  max_idle_conns: 10
+  max_lifetime: "10m"
+
+redis:
+  addr: "redis:6379"
+  password: ""
+  db: 0
+  pool_size: 20
+  cache_ttl: "2h"
+
+rate_limit:
+  enabled: true
+  rate: 500
+  bucket_size: 1000
+  key_prefix: "rl:"
+
+short_url:
+  base_url: "http://localhost:8080"
+  code_length: 7
+  max_retries: 5
+
+telemetry:
+  metrics_enabled: true
+  metrics_path: "/metrics"
+  tracing_enabled: false
+  otlp_endpoint: "localhost:4317"
+  service_name: "gateway-prod"
